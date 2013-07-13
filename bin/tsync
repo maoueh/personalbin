@@ -1,0 +1,23 @@
+#!/usr/bin/env ruby
+require 'personalbin/cli/base'
+
+class TSync < Cli::Base
+  def usage()
+    "Usage: #{name()} <source> <destination>"
+  end
+
+  def description()
+    <<-EOD
+      Prints what is required to be synced to transfer
+      all data from source to directory.
+    EOD
+  end
+
+  def execute()
+    error("The argument <source> and <destination> must be specified") if @arguments.empty?()
+    error("The argument <destination> must be specified") if @arguments.size() == 1
+    error("No more than two arguments can be specified") if @arguments.size() > 2
+
+    puts "Computing source needed files."
+  end
+end
