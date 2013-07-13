@@ -1,7 +1,9 @@
 #!/usr/bin/env ruby
+require 'set'
+
 require 'personalbin/cli/base'
 
-class TSync < Cli::Base
+class TSync < Personalbin::Cli::Base
   def usage()
     "Usage: #{name()} <source> <destination>"
   end
@@ -9,7 +11,9 @@ class TSync < Cli::Base
   def description()
     <<-EOD
       Prints what is required to be synced to transfer
-      all data from source to directory.
+      all files & folders from source to destination.
+
+      This command is not recursive ... currently.
     EOD
   end
 
@@ -18,6 +22,26 @@ class TSync < Cli::Base
     error("The argument <destination> must be specified") if @arguments.size() == 1
     error("No more than two arguments can be specified") if @arguments.size() > 2
 
-    puts "Computing source needed files."
+    source = File.expand_path(@arguments[0])
+    destination = File.expand_path(@arguments[1])
+
+    error("The argument <source> must be a directory") if not File.directory?(source)
+    error("The argument <destination> must be a directory") if not File.directory?(source)
+
+    source_entries = find_entries(source)
+    destination_entries = find_entries(destination)
+
+    diff = source_entries.to_set() - destination_entries.to_set()
+    diff.each do |element|
+      puts element
+    end
+
+    puts "No difference between [#{@arguments[0]}] and [#{@arguments[1]}]" if diff.empty?()
+  end
+
+  def find_entries(directory)
+    Dir.glob("#{directory}/*").map { |entry| File.basename(entry) }
   end
 end
+
+TSync.new(ARGV).run()
