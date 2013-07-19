@@ -18,4 +18,6 @@ Gem::Specification.new do |gem|
   gem.executables   = gem.files.grep(%r{^bin/}) { |file| File.basename(file) }
   gem.test_files    = gem.files.grep(%r{^(test|gem|features)/})
   gem.require_paths = ["lib"]
+
+  gem.add_dependency "rclid", "~> 1.0.0"
 end

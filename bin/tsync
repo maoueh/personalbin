@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 require 'set'
 
-require 'personalbin/cli/base'
+require 'rclid/base'
 
-class TSync < Personalbin::Cli::Base
+class TSync < Rclid::Base
   def usage()
     "Usage: #{name()} <source> <destination>"
   end
@@ -13,12 +13,12 @@ class TSync < Personalbin::Cli::Base
       Prints what is required to be synced to transfer
       all files & folders from source to destination.
 
-      This command is not recursive ... currently.
+      This command is not recursive ... yet.
     EOD
   end
 
   def execute()
-    error("The argument <source> and <destination> must be specified") if @arguments.empty?()
+    error("The arguments <source> and <destination> must be specified") if @arguments.empty?()
     error("The argument <destination> must be specified") if @arguments.size() == 1
     error("No more than two arguments can be specified") if @arguments.size() > 2
 

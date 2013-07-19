@@ -1,11 +1,13 @@
 PATH
   remote: .
   specs:
-    personalbin (1.0.0.dev1)
+    personalbin (1.0.0)
+      rclid (~> 1.0.0)
 
 GEM
   remote: https://rubygems.org/
   specs:
+    rclid (1.0.0)
 
 PLATFORMS
   x86-mingw32
