@@ -29,12 +29,12 @@ class Kawa < Rclid::Base
       exit(0)
     end
 
-    help() if @arguments.empty?()
-
     if @run_module
       run_module(@run_module)
       exit($?.exitstatus)
     end
+
+    help() if @arguments.empty?()
 
     kawa_command = "java kawa.repl -d #{@output_dir}"
     kawa_command +=" -f #{@macro}" if @macro
