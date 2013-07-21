@@ -1,0 +1,112 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+require 'rclid/base'
+
+class Kawa < Rclid::Base
+  def initialize(arguments = ARGV, options = {})
+    super(arguments)
+
+    @classpath = ""
+    @macro = false
+    @main = false
+    @output_dir = File.expand_path(".")
+    @run_module = false
+    @show_version = false
+  end
+
+  def execute()
+    error("The environment variable KAWA_HOME must be set.") if not ENV['KAWA_HOME']
+
+    kawa_home = ENV['KAWA_HOME']
+    kawa_jar = find_kawa_jar(kawa_home)
+    kawa_path = "#{kawa_home}/#{kawa_jar}"
+    kawa_classpath = build_classpath(kawa_path, @classpath)
+
+    ENV['CLASSPATH'] = kawa_classpath
+    if @show_version
+      system("java kawa.repl --version")
+      exit(0)
+    end
+
+    help() if @arguments.empty?()
+
+    if @run_module
+      run_module(@run_module)
+      exit($?.exitstatus)
+    end
+
+    kawa_command = "java kawa.repl -d #{@output_dir}"
+    kawa_command +=" -f #{@macro}" if @macro
+    kawa_command +=" --main" if @main
+    kawa_command += " -C #{@arguments.join(" ")}" if not @arguments.empty?()
+
+    puts(kawa_command)
+    exit($?.exitstatus)
+  end
+
+  def options(parser)
+    super(parser)
+
+    parser.on("-o", "--ouput-dir OUTPUT_DIR", "Directory where to put compiled classes") do |output_dir|
+      @output_dir = File.expand_path(output_dir)
+    end
+
+    parser.on("-c", "--classpath CLASSPATH", "Classpath of compilation") do |classpath|
+      @classpath = classpath
+    end
+
+    parser.on("--main", "Generate a main method") do
+      @main = true
+    end
+
+    parser.on("-m", "--macro MACRO_FILEPATH", "Make all definitions from MACRO_PATH available") do |macro|
+      @macro = macro
+    end
+
+    parser.on("-r", "--run JAVA_CLASS", "Run a compiled scheme module") do |java_class|
+      @run_module = java_class
+    end
+
+    parser.on("-v", "--version", "Show Kawa version") do
+      @show_version = true
+    end
+  end
+
+  def build_classpath(kawa_path, classpath)
+    # TODO: Use right separator for current platform (; on windows, : on Unix, ??? on Mac)
+    separator = ";"
+
+    "#{kawa_path}#{separator}#{classpath}"
+  end
+
+  def extract_module_name(file)
+    str = File.read(file)
+    match = str.scan(/\(module-name <([a-z\.]+)>\)/)
+
+    match[0][0]
+  end
+
+  def find_kawa_jar(kawa_home)
+    Dir.foreach(kawa_home) do |file|
+      return file if file =~ /kawa-[0-9\-\.]+\.jar/
+    end
+  end
+
+  def run_module(file)
+    if not File::exists?(file)
+      puts "File [#{file}] does not exists."
+      exit(1)
+    end
+
+    module_name = extract_module_name(file)
+    if not module_name
+      puts "Could not extract module name (by searching for [(module-name <...>)]) from [#{file}]."
+      exit(1)
+    end
+
+    system("java #{module_name} #{ARGV.join(" ")}")
+  end
+end
+
+Kawa.new().run()
