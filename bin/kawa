@@ -41,7 +41,7 @@ class Kawa < Rclid::Base
     kawa_command +=" --main" if @main
     kawa_command += " -C #{@arguments.join(" ")}" if not @arguments.empty?()
 
-    puts(kawa_command)
+    system(kawa_command)
     exit($?.exitstatus)
   end
 
