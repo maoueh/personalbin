@@ -30,19 +30,15 @@ class Kawa < Rclid::Base
     end
 
     if @run_module
-      run_module(@run_module)
-      exit($?.exitstatus)
+      exit_code = compile([@run_module])
+      exit(exit_code) if (exit_code != 0)
+
+      exit(run_module(@run_module))
     end
 
     help() if @arguments.empty?()
 
-    kawa_command = "java kawa.repl -d #{@output_dir}"
-    kawa_command +=" -f #{@macro}" if @macro
-    kawa_command +=" --main" if @main
-    kawa_command += " -C #{@arguments.join(" ")}" if not @arguments.empty?()
-
-    system(kawa_command)
-    exit($?.exitstatus)
+    exit(compile(@arguments))
   end
 
   def options(parser)
@@ -73,9 +69,40 @@ class Kawa < Rclid::Base
     end
   end
 
+   def compile(modules)
+    kawa_command = "java kawa.repl -d #{@output_dir}"
+    kawa_command += " -f #{@macro}" if @macro
+    kawa_command += " --main" if @main
+    kawa_command += " -C #{modules.join(" ")}"
+
+    system(kawa_command)
+    return $?.exitstatus
+  end
+
+  def run_module(module_path)
+    if not File::exists?(module_path)
+      puts "Module [#{module_path}] does not exist."
+      return 1
+    end
+
+    module_name = extract_module_name(module_path)
+    if not module_name
+      puts "Could not extract module name (by searching for [(module-name <...>)]) from [#{module_path}]."
+      return 1
+    end
+
+    system("java #{module_name} #{@arguments.join(" ")}")
+    return $?.exitstatus
+  end
+
   def build_classpath(kawa_path, classpath)
-    # TODO: Use right separator for current platform (; on windows, : on Unix, ??? on Mac)
-    separator = ";"
+    windows = (RbConfig::CONFIG['host_os'].downcase =~ /mswin|mingw|cygwin/) != nil
+    case
+    when windows == true
+      separator = ";"
+    else
+      separator = ":"
+    end
 
     "#{kawa_path}#{separator}#{classpath}"
   end
@@ -91,21 +118,6 @@ class Kawa < Rclid::Base
     Dir.foreach(kawa_home) do |file|
       return file if file =~ /kawa-[0-9\-\.]+\.jar/
     end
-  end
-
-  def run_module(file)
-    if not File::exists?(file)
-      puts "File [#{file}] does not exists."
-      exit(1)
-    end
-
-    module_name = extract_module_name(file)
-    if not module_name
-      puts "Could not extract module name (by searching for [(module-name <...>)]) from [#{file}]."
-      exit(1)
-    end
-
-    system("java #{module_name} #{ARGV.join(" ")}")
   end
 end
 
