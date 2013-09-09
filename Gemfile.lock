@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    personalbin (1.0.0)
+    personalbin (1.2.0)
       rclid (~> 1.0.0)
 
 GEM
