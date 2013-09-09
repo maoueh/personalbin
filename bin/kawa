@@ -96,8 +96,13 @@ class Kawa < Rclid::Base
   end
 
   def build_classpath(kawa_path, classpath)
-    # TODO: Use right separator for current platform (; on windows, : on Unix, ??? on Mac)
-    separator = ";"
+    windows = (RbConfig::CONFIG['host_os'].downcase =~ /mswin|mingw|cygwin/) != nil
+    case
+    when windows == true
+      separator = ";"
+    else
+      separator = ":"
+    end
 
     "#{kawa_path}#{separator}#{classpath}"
   end
