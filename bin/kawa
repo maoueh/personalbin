@@ -90,7 +90,7 @@ class Kawa < Rclid::Base
 
     module_name = extract_module_name(module_path)
     if not module_name
-      puts "Could not extract module name (by searching for [(module-name <...>)]) from [#{module_path}]."
+      puts "Could not extract module name (by searching for [(module-name <...>)]) in [#{module_path}]."
       return 1
     end
 
@@ -113,8 +113,9 @@ class Kawa < Rclid::Base
   def extract_module_name(file)
     str = File.read(file)
     match = str.scan(/\(module-name <([a-z\.]+)>\)/)
+    group = match[0]
 
-    match[0][0]
+    group ? group[0] : nil
   end
 
   def find_kawa_jar(kawa_home)
