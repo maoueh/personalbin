@@ -36,7 +36,10 @@ class Kawa < Rclid::Base
       exit(run_module(@run_module))
     end
 
-    help() if @arguments.empty?()
+    if @arguments.empty?()
+      system("java kawa.repl")
+      exit($?.exitstatus)
+    end
 
     exit(compile(@arguments))
   end
