@@ -1,0 +1,90 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+require 'pathname'
+require 'rclid/base'
+
+class SyncEclipsePreferences < Rclid::Base
+  @@DEFAULT_EXCLUSION = /^(runtime|excluded)/
+  @@DEFAULT_MASTER = "preferences"
+  @@DEFAULT_WORKSPACES_DIR = "~/Workspaces"
+
+  def initialize(arguments = ARGV, options = {})
+    super(arguments, options)
+
+    @dry_run = true
+    @exclusion = @@DEFAULT_EXCLUSION
+    @master = @@DEFAULT_MASTER
+    @workspaces_dir = @@DEFAULT_WORKSPACES_DIR
+  end
+
+  def name()
+    "sync_eclipse_preferences"
+  end
+
+  def usage()
+    "usage: #{name()} (options)"
+  end
+
+  def options(parser)
+    parser.on_tail("-f", "--force", "Run the command in normal mode") do
+      @dry_run = false
+    end
+
+    parser.on_tail("-n", "--[no-]dry-run", "Run the command in dry mode, without changing anything on disk") do |dry_run|
+      @dry_run = dry_run
+    end
+
+    super(parser)
+  end
+
+  def execute()
+    sync()
+  end
+
+  def sync()
+    header = "Syncing preferences (Master '#{@master}')"
+    header += " | Dry run" if @dry_run
+
+    puts header
+    preferences_dir = get_preferences_dir()
+    master_preferences_dir = File.expand_path("#{@workspaces_dir}/#{@master}/#{preferences_dir}")
+
+    slaves().each do |slave|
+      puts " Slave '#{slave}'"
+      next if @dry_run
+
+      slave_preferences_dir = File.expand_path("#{@workspaces_dir}/#{slave}/#{preferences_dir}")
+      FileUtils.mkpath(slave_preferences_dir)
+      Pathname.new(master_preferences_dir).children.each do |child|
+        FileUtils.cp_r(child, slave_preferences_dir)
+      end
+    end
+  end
+
+  def slaves()
+    directory = File.expand_path(@workspaces_dir)
+    slaves = Pathname.new(directory).children.select do |child|
+      basepath = get_basepath(directory, child)
+
+      child.directory? && basepath !~ @exclusion && basepath != @master
+    end
+
+    slaves.map do |slave|
+      get_basepath(directory, slave)
+    end
+  end
+
+  def get_basepath(directory, entry)
+    basepath = entry.to_s().sub(directory, "")
+    basepath = basepath[1..-1] if basepath.start_with?("/") or basepath.start_with?("\\")
+
+    basepath
+  end
+
+  def get_preferences_dir()
+    ".metadata/.plugins/org.eclipse.core.runtime/.settings"
+  end
+end
+
+SyncEclipsePreferences.new(ARGV).run()
