@@ -23,7 +23,27 @@ class SyncEclipsePreferences < Rclid::Base
   end
 
   def usage()
-    "usage: #{name()} (options)"
+    "usage: #{name()} (options) [<workspace> ...]"
+  end
+
+  def description()
+    <<-EOD
+      Command that sync Eclipse preferences across various workspaces
+      so that you don't need to do this manually. To work correctly, the
+      script assumes all your workspace directories are located under a
+      common folder (defaults to #{@workspaces_dir}). In this directory,
+      the script expects a master workspace (defaults to #{@master}) from
+      where Eclipse preferences are copied.
+
+      Each folder in the workspaces directory are "slave" repositories
+      which you want to sync with the master one. All "slave" directories
+      in folder `excluded` or starting with `runtime` are filtered out (i.e
+      they are not synced).
+
+      Without arguments, the script sync all slaves it found. You can also
+      sync specific "slave" by specifying them on the as arguments on
+      the command line.
+    EOD
   end
 
   def options(parser)
@@ -35,6 +55,14 @@ class SyncEclipsePreferences < Rclid::Base
       @dry_run = dry_run
     end
 
+    parser.on_tail("-m", "--master NAME", "Master workspace name preferences are copied from, defaults to '#{@master}'") do |master|
+      @master = master
+    end
+
+    parser.on_tail("-w", "--workspaces DIR", "Directory where workspaces are located, defaults to '#{@workspaces_dir}'") do |workspaces_dir|
+      @workspaces_dir = workspaces_dir
+    end
+
     super(parser)
   end
 
@@ -43,13 +71,19 @@ class SyncEclipsePreferences < Rclid::Base
   end
 
   def sync()
+    preferences_dir = get_preferences_dir()
+    workspaces_dir = File.expand_path(@workspaces_dir)
+    master_workspace_dir = "#{workspaces_dir}/#{@master}"
+    master_preferences_dir = "#{master_workspace_dir}/#{preferences_dir}"
+
+    error("Workspaces directory '#{@workspaces_dir}' does not exists.") if !File.exists?(workspaces_dir)
+    error("Master workspace '#{@master}' could not be found at '#{master_workspace_dir}'") if !File.exists?(master_workspace_dir)
+    error("Master workspace preferences could not be found at '#{master_preferences_dir}'") if !File.exists?(master_preferences_dir)
+
     header = "Syncing preferences (Master '#{@master}')"
     header += " | Dry run" if @dry_run
 
     puts header
-    preferences_dir = get_preferences_dir()
-    master_preferences_dir = File.expand_path("#{@workspaces_dir}/#{@master}/#{preferences_dir}")
-
     slaves().each do |slave|
       puts " Slave '#{slave}'"
       next if @dry_run
@@ -70,8 +104,12 @@ class SyncEclipsePreferences < Rclid::Base
       child.directory? && basepath !~ @exclusion && basepath != @master
     end
 
-    slaves.map do |slave|
+    slaves.map! do |slave|
       get_basepath(directory, slave)
+    end
+
+    slaves.select do |slave|
+      @arguments.empty? || @arguments.include?(slave)
     end
   end
 
